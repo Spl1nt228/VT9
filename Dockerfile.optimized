@@ -1,0 +1,63 @@
+# Задание 2: Оптимизированный multi-stage Dockerfile
+
+# Этап 1: Сборка приложения
+FROM node:20-alpine AS builder
+
+# Установка рабочей директории
+WORKDIR /usr/src/app
+
+# Копирование файлов зависимостей
+COPY package*.json ./
+
+COPY prisma ./prisma
+# Установка всех зависимостей (включая dev)
+RUN npm install
+
+# Копирование исходного кода
+COPY . .
+
+# Генерация Prisma клиента
+RUN npx prisma generate
+
+# Сборка приложения
+RUN npm run build
+
+# Этап 2: Продакшн образ
+FROM node:20-alpine AS production
+
+# Создание пользователя для безопасности
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nestjs -u 1001
+
+# Установка рабочей директории
+WORKDIR /usr/src/app
+
+# Копирование файлов зависимостей
+COPY package*.json ./
+
+# Установка только production зависимостей
+RUN npm ci --only=production && npm cache clean --force
+
+# Копирование собранного приложения из builder стадии
+COPY --from=builder /usr/src/app/dist ./dist
+
+# Копирование сгенерированного Prisma клиента
+COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /usr/src/app/node_modules/@prisma ./node_modules/@prisma
+
+# Копирование папки prisma из builder стадии
+COPY --from=builder /usr/src/app/prisma ./prisma
+
+# Изменение владельца файлов
+RUN chown -R nestjs:nodejs /usr/src/app
+USER nestjs
+
+# Открытие порта
+EXPOSE 3000
+
+# Проверка здоровья приложения
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node --version || exit 1
+
+# Запуск приложения
+CMD ["node", "dist/main"]
