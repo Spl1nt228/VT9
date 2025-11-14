@@ -46,14 +46,20 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      # 5. Запуск тестов
+      # 5. Применение схемы к базе
+      - name: Apply database schema
+        run: npx prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+
+      # 6. Запуск тестов
       - name: Run tests
         run: npm test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
           JWT_SECRET: test-secret
 
-      # 6. Проверка сборки
+      # 7. Проверка сборки
       - name: Build application
         run: npm run build
 
