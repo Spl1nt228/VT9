@@ -114,7 +114,12 @@ jobs:
 
       # 8. Деплой на Render через Render Deploy Hook
       - name: Deploy to Render
-        run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "ERROR: RENDER_DEPLOY_HOOK_URL secret is not set. Aborting deploy step."
+            exit 1
+          fi
+          # POST to Render deploy hook (silent, fail on HTTP error)
+          curl -sS -X POST "$RENDER_DEPLOY_HOOK_URL" || { echo "Deploy hook call failed"; exit 1; }

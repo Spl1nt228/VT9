@@ -8,15 +8,17 @@ WORKDIR /usr/src/app
 # Копирование файлов зависимостей
 COPY package*.json ./
 
+# Копирование директории Prisma перед установкой зависимостей
 COPY prisma ./prisma
+
 # Установка зависимостей
 RUN npm install
 
 # Копирование исходного кода
 COPY . .
 
-# Генерация Prisma клиента
-RUN npx prisma generate
+# Генерация Prisma клиента (уже была выполнена в postinstall)
+# RUN npx prisma generate
 
 # Сборка приложения
 RUN npm run build
